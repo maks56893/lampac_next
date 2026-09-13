@@ -53,7 +53,7 @@ openssl rand -hex 32
 | `url` | string | — | Базовый адрес DLNA-сервера, например `http://10.1.1.100:50001`. |
 | `rootObjectId` | string | `"0"` | ObjectID корневой папки Browse. |
 | `subtitles` | bool | `true` | Подбирать внешние субтитры (из DIDL и угадыванием соседних файлов). |
-| `directLocalIp` | bool | `true` | Для LAN-клиентов отдавать прямую ссылку на NAS вместо `/proxy`. Касается только видео и картинок (их грузят теги `video`/`img`, которым CORS не нужен). Субтитры всегда идут через `/proxy`: Лампа качает их через XHR, а DLNA-сервер Synology заголовков CORS не отдаёт. |
+| `directLocalIp` | bool | `false` | Для LAN-клиентов отдавать прямую ссылку на NAS вместо `/proxy`. **Работает только если ваш DLNA-сервер отдаёт заголовки CORS** — Synology на старом pupnp SDK их не отдаёт, и воспроизведение падает с `blocked by CORS policy`. Субтитры идут через `/proxy` всегда, независимо от этого флага. |
 | `allowLocalWithoutToken` | bool | `true` | Разрешить LAN-клиентам доступ без токена. |
 | `timeoutSeconds` | int | `10` | Таймаут SOAP-запроса к NAS. |
 | `cacheMinutes` | int | `5` | TTL кеша распарсенного ответа Browse (сырые URL, без прокси-ссылок). |
@@ -162,11 +162,23 @@ Token-маршрут accsdb (`/syno_dlna/js/{token}`) намеренно **не*
 | SOAP `Browse` (`ContentDirectory/control`) | Делает сервер (server→server). CORS не применяется. |
 | Перебор субтитров (`.srt`/`.ass`/`.vtt`) | Делает сервер. |
 | Загрузка субтитров плеером (XHR) | Через `/proxy` на домене Lampac — тот же origin. |
-| Видео и картинки | Теги `video`/`img`, которым CORS не нужен: работают и через `/proxy`, и напрямую. |
+| Видео | Через `/proxy` — тот же origin. Плеер Лампы запрашивает поток с проверкой CORS, поэтому прямая ссылка на Synology не работает. |
+| Картинки | Через `/proxy` — тот же origin. |
 
-Отдельно про `directLocalIp`: он отдаёт LAN-клиентам прямую ссылку на NAS **только для видео и
-картинок**. Субтитры всегда идут через `/proxy`, потому что их Лампа качает через XHR, а
-Synology заголовков CORS не отдаёт. Так что даже при `directLocalIp: true` внешний прокси не нужен.
+Отдельно про `directLocalIp` — по умолчанию он **выключен**, и для Synology включать его не
+нужно. Изначально предполагалось, что прямая ссылка на NAS безопасна хотя бы для видео, раз
+его грузит тег `video`. На практике это не так: плеер Лампы запрашивает поток в режиме с
+проверкой CORS, и браузер отвечает
+
+```
+Access to video at 'http://10.1.1.100:50002/v/NDLNA/991.mkv' from origin
+'http://10.1.1.100:9118' has been blocked by CORS policy: No 'Access-Control-Allow-Origin'
+header is present on the requested resource.
+```
+
+Поэтому через `/proxy` идёт всё — и видео, и картинки, и субтитры. Включать `directLocalIp`
+имеет смысл только если DLNA-сервер отдаёт заголовки CORS сам; Synology на старом pupnp SDK
+их не отдаёт. Внешний прокси при этом всё равно не нужен ни в одном из режимов.
 
 ### Порядок действий
 
@@ -196,7 +208,7 @@ openssl rand -hex 32
   "SynoDLNA": {
     "enable": true,
     "url": "http://10.1.1.100:50001",
-    "directLocalIp": true,
+    "directLocalIp": false,
     "allowLocalWithoutToken": true,
     "subtitles": true,
     "users": [

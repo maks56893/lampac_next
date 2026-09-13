@@ -23,9 +23,13 @@ public class ModuleConf : ModuleBaseConf
     public bool subtitles { get; set; } = true;
 
     /// <summary>
-    /// Для клиентов из локальной сети отдавать прямую ссылку на NAS, а не через /proxy
+    /// Для клиентов из локальной сети отдавать прямую ссылку на NAS, а не через /proxy.
+    /// По умолчанию выключено: плеер Lampa запрашивает видео в режиме с проверкой CORS,
+    /// а DLNA-сервер Synology (старый pupnp SDK) заголовка Access-Control-Allow-Origin
+    /// не отдаёт - прямая ссылка приводит к "blocked by CORS policy" прямо при старте
+    /// воспроизведения. Включать только если ваш DLNA-сервер отдаёт заголовки CORS.
     /// </summary>
-    public bool directLocalIp { get; set; } = true;
+    public bool directLocalIp { get; set; }
 
     /// <summary>
     /// Разрешить доступ из локальной сети без токена

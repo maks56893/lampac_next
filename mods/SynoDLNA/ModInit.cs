@@ -45,7 +45,7 @@ public class ModInit : IModuleLoaded
             enable = false,
             rootObjectId = "0",
             subtitles = true,
-            directLocalIp = true,
+            directLocalIp = false,
             allowLocalWithoutToken = true,
             timeoutSeconds = 10,
             cacheMinutes = 5,
